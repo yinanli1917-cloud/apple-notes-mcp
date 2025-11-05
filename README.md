@@ -178,6 +178,74 @@ result = subprocess.run(
 
 **推荐方案1**：最简单，性能最好，代码复用率高。
 
+## 版本控制（存档与回滚）
+
+### 快速操作指南
+
+项目已使用Git进行版本控制，你可以随时创建"存档点"和回滚。
+
+#### 创建存档（每次重要修改后）
+```bash
+cd ~/Documents/apple-notes-mcp
+
+# 1. 查看修改了什么
+git status
+
+# 2. 添加所有修改（或指定文件）
+git add .
+
+# 3. 创建存档点（commit）
+git commit -m "描述你的修改，例如：添加了XXX功能"
+```
+
+#### 查看历史存档
+```bash
+# 查看所有存档点
+git log --oneline
+
+# 查看详细历史
+git log
+```
+
+#### 回滚到某个存档点
+```bash
+# 方式1: 回滚所有未提交的修改（恢复到上次commit）
+git reset --hard HEAD
+
+# 方式2: 回滚到特定存档点
+git log --oneline  # 找到commit的ID（例如：cab9d2d）
+git reset --hard cab9d2d  # 回滚到那个存档点
+
+# 方式3: 只是查看旧版本（不真的回滚）
+git checkout cab9d2d  # 切换到那个版本查看
+git checkout main      # 回到最新版本
+```
+
+#### 查看某个文件的修改历史
+```bash
+# 查看文件修改记录
+git log -p scripts/server.py
+
+# 对比当前版本和上次commit的差异
+git diff scripts/server.py
+```
+
+### 推荐的使用流程
+
+**每次重要修改后**：
+1. `git status` - 查看改了什么
+2. `git add .` - 添加修改
+3. `git commit -m "说明修改内容"` - 创建存档点
+
+**出问题时**：
+1. `git log --oneline` - 找到"完美状态"的commit ID
+2. `git reset --hard <commit-ID>` - 一键回滚
+
+**当前完美状态存档**：
+- Commit: `cab9d2d` (初始版本)
+- 描述: BGE-M3语义搜索系统，920条笔记，87%准确率
+- 如果出问题，运行: `git reset --hard cab9d2d`
+
 ## 项目维护指南
 
 ### 文档结构
