@@ -12,7 +12,7 @@
 
 Turn your Apple Notes into a searchable knowledge base powered by AI. Instead of remembering exact titles, just describe what you're looking for.
 
-![Search Demo in Claude Desktop](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEFeaxpDFz_ebvlFiPF1D_70AK9AUaN4AACqD0AAie1YVSqmHu0DsQR3TYE.png)
+![Search Demo in Claude Desktop.png](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEFee5pDF6a4WzK4Mz-XJVVEhYDeoaazwAC7D0AAie1YVTdV7rs-h_-2jYE.png)
 
 ### Features
 
