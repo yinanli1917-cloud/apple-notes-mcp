@@ -1,0 +1,16 @@
+# Apple Notes MCP Server Dependencies
+# For Railway deployment and local development
+
+# MCP Framework
+fastmcp>=2.13.0
+
+# Vector Database
+chromadb>=0.4.0
+
+# Embeddings Model
+FlagEmbedding>=1.2.0
+
+# Additional dependencies
+sentence-transformers>=2.2.0
+torch>=2.0.0
+numpy>=1.24.0

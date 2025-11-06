@@ -1,10 +1,39 @@
 # Apple Notes MCP 语义搜索系统
 
-> 使用BGE-M3模型实现高质量中文语义搜索，达到ima级别效果
+> 使用BGE-M3模型实现高质量中文语义搜索，可部署到云端实现远程访问
 
-## 快速开始
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/apple-notes-mcp)
 
-### 当前状态：✅ 已部署，正常运行
+## 功能特性
+
+- ✅ **语义搜索**：基于 BGE-M3 模型（1024维向量）
+- ✅ **高准确率**：87% 中文语义匹配准确率
+- ✅ **多语言支持**：中英文混合 + 100+ 语言
+- ✅ **多端接入**：Claude Desktop、Poke AI（iMessage）
+- ✅ **本地/云端**：支持本地和 Railway 云端部署
+- ✅ **API 保护**：云端部署自动启用 API Key 认证
+
+## 快速部署
+
+### 方式 1: 本地使用（Claude Desktop）
+
+1. 克隆仓库并安装依赖
+2. 导出笔记：`python3 scripts/export_notes_fixed.py`
+3. 构建索引：`python3 scripts/indexer.py`
+4. 配置 Claude Desktop（见下文）
+
+### 方式 2: 云端部署（Poke AI 远程访问）
+
+1. 点击上方 "Deploy on Railway" 按钮
+2. 设置环境变量 `API_KEY`
+3. 上传你的 `notes.db`
+4. 运行 `build_index_cloud.py`
+
+**详细步骤**: 查看 [DEPLOY.md](DEPLOY.md) 或 [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)
+
+---
+
+## 当前状态（作者实例）
 
 - **920条笔记** 已索引
 - **BGE-M3模型**（1024维向量）
@@ -119,64 +148,48 @@ python3 indexer.py full
 2. 重启Claude Desktop
 3. 查看日志: `~/Library/Logs/Claude/mcp-server-apple-notes.log`
 
+## Poke AI 集成（iMessage 助手）
+
+**✅ 已实现！** 现在可以通过 Poke AI (Interaction Inc.) 在 iMessage 中搜索你的备忘录。
+
+### 快速开始
+
+1. **启动 HTTP MCP 服务器**：
+   ```bash
+   cd ~/Documents/apple-notes-mcp/scripts
+   python3 server_http.py
+   ```
+
+2. **在 Poke AI 中配置**：
+   - Name: `Apple Notes Search`
+   - Server URL: `http://127.0.0.1:8000/sse`
+   - API Key: *(留空)*
+
+3. **在 iMessage 中使用**：
+   - "搜索幽默搞笑的内容"
+   - "找一找关于 AI 的笔记"
+   - "查看备忘录统计"
+
+**详细文档**: 查看 [POKE_INTEGRATION.md](POKE_INTEGRATION.md)
+
+### 两个服务器版本
+
+- **server.py** - Claude Desktop 使用（stdio 传输）
+- **server_http.py** - Poke AI 使用（HTTP/SSE 传输）
+
+两者可以同时运行，互不干扰。
+
 ## 下一步扩展
 
-### 选项A: 集成到Poke（iMessage助手）
-需要将MCP转换为HTTP API，详见下文"MCP to API"部分
-
-### 选项B: 提升搜索质量
+### 选项A: 提升搜索质量
 1. 使用DeepSeek API重排序
 2. 混合检索（BM25 + 向量搜索）
 3. 查询扩展
 
-### 选项C: 性能优化
+### 选项B: 性能优化
 1. MPS GPU加速
 2. 模型预加载
 3. 批量查询
-
-## MCP to API (接入Poke)
-
-MCP使用stdio协议，不能直接作为HTTP API。有三种方案：
-
-### 方案1: 直接调用搜索函数（推荐）
-在Poke中直接import和调用：
-```python
-# 在Poke中
-import sys
-sys.path.append('/Users/yinanli/Documents/apple-notes-mcp/scripts')
-from indexer import collection
-
-def search_notes(query, limit=5):
-    results = collection.query(query_texts=[query], n_results=limit)
-    return results
-```
-
-### 方案2: 创建HTTP Wrapper
-创建`scripts/api_server.py`：
-```python
-from fastapi import FastAPI
-from indexer import collection
-
-app = FastAPI()
-
-@app.get("/search")
-def search(query: str, limit: int = 5):
-    results = collection.query(query_texts=[query], n_results=limit)
-    return {"results": results}
-
-# 运行: uvicorn api_server:app --port 8000
-```
-
-### 方案3: 使用subprocess调用
-```python
-import subprocess
-result = subprocess.run(
-    ["python3", "indexer.py", "search", query],
-    capture_output=True, text=True
-)
-```
-
-**推荐方案1**：最简单，性能最好，代码复用率高。
 
 ## 版本控制（存档与回滚）
 
