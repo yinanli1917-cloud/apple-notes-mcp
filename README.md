@@ -12,7 +12,7 @@
 
 Turn your Apple Notes into a searchable knowledge base powered by AI. Instead of remembering exact titles, just describe what you're looking for.
 
-![Search Demo](images/demo.png)
+![Search Demo in Claude Desktop](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEFeaxpDFz_ebvlFiPF1D_70AK9AUaN4AACqD0AAie1YVSqmHu0DsQR3TYE.png)
 
 ### Features
 
@@ -118,7 +118,7 @@ MIT License © 2025 [Yinan Li](https://github.com/yinanli1917-cloud)
 
 用 AI 把你的苹果备忘录变成可搜索的知识库。不需要记住笔记标题，只要描述你想找什么就行。
 
-![搜索演示](images/demo.png)
+![在 Claude Desktop 里的搜索演示](https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEFeaxpDFz_ebvlFiPF1D_70AK9AUaN4AACqD0AAie1YVSqmHu0DsQR3TYE.png)
 
 ### 特性
 
