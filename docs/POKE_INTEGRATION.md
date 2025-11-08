@@ -1,90 +1,153 @@
-# Poke AI 集成指南
+# Poke AI 集成指南 / Poke AI Integration Guide
 
-本文档说明如何将 Apple Notes MCP 语义搜索系统接入到 Poke AI（来自 Interaction Inc. 的 iMessage AI 助手）。
+[中文](#中文) | [English](#english)
 
-## 系统概览
+---
+
+## 中文
+
+### 系统概览
 
 **Apple Notes MCP 系统**:
 - 920 条笔记已索引
 - BGE-M3 模型（1024 维向量）
 - 87% 搜索准确率
-- 支持中英文混合搜索
+- 支持中英文混合语义搜索
 
-**两个服务器版本**:
-1. `server.py` - stdio 传输，用于 Claude Desktop
-2. `server_http.py` - HTTP/SSE 传输，用于 Poke AI（本文档重点）
+**技术架构**:
+```
+Poke AI (iMessage/iPhone)
+    ↓ HTTPS
+Cloudflare Workers (全球边缘网络)
+    ↓ HTTPS
+Cloudflare Tunnel (公网隧道)
+    ↓ HTTP
+Python API Server (本地 Mac)
+    ↓
+BGE-M3 Model + ChromaDB (语义搜索)
+    ↓
+Apple Notes 数据库
+```
 
----
+### 快速开始
 
-## 快速开始
+#### 步骤 1: 启动服务
 
-### 步骤 1: 启动 HTTP MCP 服务器
-
-在终端中运行：
+使用提供的启动脚本一键启动所有服务：
 
 ```bash
 cd ~/Documents/apple-notes-mcp/scripts
-python3 server_http.py
+./start_poke_services.sh
 ```
 
-你应该看到：
+**脚本会自动**:
+1. 检查依赖（Python Flask、Cloudflare Tunnel）
+2. 启动 Python API 服务器（端口 8001）
+3. 启动 Cloudflare Tunnel（生成公网 URL）
+4. 显示所有服务状态和 URL
 
+**输出示例**:
 ```
-╭──────────────────────────────────────────────────────────────────╮
-│                     FastMCP 2.13.0.2                             │
-│                                                                  │
-│  🖥  Server name: apple-notes-search                             │
-│  📦 Transport:   SSE                                             │
-│  🔗 Server URL:  http://127.0.0.1:8000/sse                       │
-╰──────────────────────────────────────────────────────────────────╯
+========================================
+  ✅ 所有服务已启动
+========================================
+
+本地 API 服务器:
+  http://localhost:8001
+
+公网访问地址 (Cloudflare Tunnel):
+  https://secret-rolls-stories-substances.trycloudflare.com
+
+Poke AI 配置:
+  MCP Server URL: https://apple-notes-mcp.yinanli1917.workers.dev/sse
+
+========================================
+  重要提示
+========================================
+
+1. Cloudflare Tunnel URL 会在每次启动时改变
+2. 如果 URL 改变，需要更新 wrangler.toml 并重新部署:
+
+   cd ~/Documents/apple-notes-mcp/cloudflare-worker
+   # 编辑 wrangler.toml，更新 LOCAL_API_URL 为上面的 URL
+   npx wrangler deploy
+
+3. 按 Ctrl+C 停止所有服务
 ```
 
-**重要**:
-- 服务器必须保持运行状态
-- 这是一个前台进程，关闭终端窗口会停止服务器
-- 建议使用终端的新标签页或窗口运行
+#### 步骤 2: 更新 Cloudflare Workers（如果 Tunnel URL 变化）
 
-### 步骤 2: 在 Poke AI 中配置 MCP 集成
+如果 Cloudflare Tunnel URL 改变了（每次重启都会改变），需要：
 
-根据你提供的截图，在 Poke AI 的 "New Integration" 页面填写：
+1. 编辑 [cloudflare-worker/wrangler.toml](../cloudflare-worker/wrangler.toml)：
+   ```toml
+   [vars]
+   ENVIRONMENT = "production"
+   LOCAL_API_URL = "https://新的-tunnel-url.trycloudflare.com"
+   ```
 
-| 字段 | 值 | 说明 |
-|------|-----|------|
-| **Name** | `Apple Notes Search` | 集成的显示名称 |
-| **Server URL** | `http://127.0.0.1:8000/sse` | MCP 服务器地址 |
-| **API Key** | *(留空)* | 本地服务器无需密钥 |
+2. 重新部署：
+   ```bash
+   cd ~/Documents/apple-notes-mcp/cloudflare-worker
+   npx wrangler deploy
+   ```
 
-然后点击 "Create Integration" 按钮。
+#### 步骤 3: 在 Poke AI 中配置
 
-### 步骤 3: 在 iMessage 中使用
+1. 打开 Poke AI 应用（iPhone/iMessage）
+2. 进入 Settings → Connections → Integrations → New Integration
+3. 填写信息：
+   - **Name**: `Apple Notes Search`
+   - **Server URL**: `https://apple-notes-mcp.yinanli1917.workers.dev/sse`
+   - **API Key**: *(留空)*
+4. 点击 "Create Integration"
 
-配置完成后，你可以通过 iMessage 向 Poke AI 发送消息来搜索备忘录：
+#### 步骤 4: 开始使用
 
 **示例对话**:
 
 ```
 你: 搜索幽默搞笑的内容
-Poke: [调用 search_notes 工具]
-     找到相关笔记：笑话、笑大家、资本主义笑话...
+Poke: 🔍 搜索: "幽默搞笑的内容"
 
-你: 搜索关于 AI 人工智能的笔记
-Poke: [返回 AI 相关的笔记]
+找到 5 个相关结果：
 
-你: 查看备忘录统计
-Poke: [调用 get_stats 工具，显示 920 条笔记已索引]
+1. **笑话** (95% 匹配)
+   📅 2024-03-15
+   这里是一些有趣的笑话内容...
+
+2. **笑大家** (87% 匹配)
+   📅 2024-02-20
+   更多搞笑段子...
+
+💡 提示：可以在 Mac 的备忘录应用中查看完整内容
+
+你: 查看统计信息
+Poke: 📊 Apple Notes 统计信息
+
+✅ 已索引笔记: 920 条
+✅ 嵌入模型: BGE-M3
+✅ 向量维度: 1024
+✅ 状态: 就绪
+
+🎯 系统信息:
+- MCP 协议: 官方 SDK
+- 传输方式: SSE (Server-Sent Events)
+- 部署平台: Cloudflare Workers
+- 本地搜索: 局域网 API (BGE-M3)
 ```
 
 ---
 
-## 可用工具
+### 可用工具
 
-Poke AI 可以调用以下 4 个 MCP 工具：
+Poke AI 可以调用以下 2 个 MCP 工具：
 
-### 1. search_notes
-**功能**: 语义搜索备忘录
+#### 1. search_notes
+**功能**: 使用 AI 语义搜索备忘录
 
 **参数**:
-- `query` (必需): 搜索关键词
+- `query` (必需): 搜索关键词（支持自然语言，如 "funny jokes"、"工作笔记"、"食谱"）
 - `limit` (可选): 返回结果数（默认 5，最多 20）
 
 **示例**:
@@ -92,38 +155,14 @@ Poke AI 可以调用以下 4 个 MCP 工具：
 - "找一找关于美国政治的笔记"
 - "AI 相关的内容，返回 10 条"
 
-### 2. refine_search
-**功能**: 带时间过滤的精细搜索
-
-**参数**:
-- `query` (必需): 搜索关键词
-- `date_after` (可选): 只搜索此日期之后的笔记（YYYY-MM-DD）
-- `date_before` (可选): 只搜索此日期之前的笔记（YYYY-MM-DD）
-- `limit` (可选): 返回结果数
-
-**示例**:
-- "搜索 2024 年之后关于 AI 的笔记"
-- "2023-01-01 到 2023-12-31 之间写的关于工作的笔记"
-
-### 3. refresh_index
-**功能**: 刷新索引（当你添加新笔记时）
-
-**说明**:
-- 会重新导出 Apple Notes
-- 增量更新向量数据库
-- 耗时约 1-3 分钟
-
-**示例**:
-- "刷新备忘录索引"
-- "更新一下笔记数据库"
-
-### 4. get_stats
-**功能**: 查看统计信息
+#### 2. get_stats
+**功能**: 查看系统统计信息
 
 **返回信息**:
-- 总笔记数
-- 已索引数
-- 索引覆盖率
+- 已索引笔记数
+- 嵌入模型信息
+- 向量维度
+- 系统状态
 
 **示例**:
 - "查看备忘录统计"
@@ -131,165 +170,64 @@ Poke AI 可以调用以下 4 个 MCP 工具：
 
 ---
 
-## 后台运行服务器
+### 技术细节
 
-如果你希望服务器在后台持续运行（即使关闭终端也不停止），有以下几种方式：
+#### 为什么需要 Cloudflare Tunnel？
 
-### 方式 1: 使用 nohup
+**问题**: Cloudflare Workers 运行在云端，无法直接访问本地 IP 地址（如 `10.0.0.189:8001`）
 
-```bash
-cd ~/Documents/apple-notes-mcp/scripts
-nohup python3 server_http.py > ~/mcp_server.log 2>&1 &
-```
+**解决方案**:
+1. **Cloudflare Tunnel** 将本地 API 服务器暴露到公网（HTTPS）
+2. **Cloudflare Workers** 通过公网 URL 访问本地 API
+3. **Python API** 调用本地的 BGE-M3 模型和 ChromaDB 进行搜索
 
-查看日志：
-```bash
-tail -f ~/mcp_server.log
-```
+#### 为什么不直接在 Cloudflare Workers 中运行 BGE-M3？
 
-停止服务器：
-```bash
-ps aux | grep server_http.py
-kill <PID>
-```
+- BGE-M3 模型大小: ~2.3GB（包含词表）
+- Cloudflare Workers 内存限制: 128MB
+- Cloudflare Workers AI 嵌入模型维度较低，中文效果不如 BGE-M3
 
-### 方式 2: 使用 tmux（推荐）
+#### 架构优势
 
-```bash
-# 安装 tmux（如果还没有）
-brew install tmux
-
-# 创建新会话
-tmux new -s mcp-server
-
-# 在 tmux 中运行服务器
-cd ~/Documents/apple-notes-mcp/scripts
-python3 server_http.py
-
-# 按 Ctrl+B 然后 D 分离会话（服务器继续运行）
-
-# 重新连接会话
-tmux attach -t mcp-server
-
-# 停止服务器：重新连接后按 Ctrl+C
-```
-
-### 方式 3: 创建 macOS LaunchAgent（开机自启）
-
-创建文件 `~/Library/LaunchAgents/com.apple-notes-mcp.plist`：
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.apple-notes-mcp</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/opt/homebrew/bin/python3.12</string>
-        <string>/Users/yinanli/Documents/apple-notes-mcp/scripts/server_http.py</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardErrorPath</key>
-    <string>/Users/yinanli/mcp_server_error.log</string>
-    <key>StandardOutPath</key>
-    <string>/Users/yinanli/mcp_server_output.log</string>
-</dict>
-</plist>
-```
-
-启动服务：
-```bash
-launchctl load ~/Library/LaunchAgents/com.apple-notes-mcp.plist
-```
-
-停止服务：
-```bash
-launchctl unload ~/Library/LaunchAgents/com.apple-notes-mcp.plist
-```
+✅ **最佳性能**: 使用本地 BGE-M3 模型，搜索质量高（87% 准确率）
+✅ **全球访问**: Cloudflare Workers 全球边缘网络，低延迟
+✅ **免费使用**: Cloudflare 免费额度足够个人使用（100,000 请求/天）
+✅ **隐私保护**: 笔记数据保留在本地，仅搜索结果通过网络传输
 
 ---
 
-## 故障排除
+### 故障排除
 
-### 问题 1: Poke AI 无法连接到服务器
+#### 问题 1: Poke AI 报错 "无法连接到 MCP 服务器"
 
 **检查清单**:
-1. 确认服务器正在运行：
+1. 确认服务启动脚本正在运行（不要关闭终端窗口）
+2. 确认 Cloudflare Workers 已部署：
    ```bash
-   curl http://127.0.0.1:8000/sse
+   curl https://apple-notes-mcp.yinanli1917.workers.dev/health
    ```
-   应该返回一些响应（不是 "Connection refused"）
+   应该返回 JSON 格式的健康检查信息
 
-2. 确认端口没有被占用：
-   ```bash
-   lsof -i :8000
-   ```
+#### 问题 2: 搜索返回 "❌ 搜索失败: API returned 403"
 
-3. 尝试重启服务器
-
-### 问题 2: 搜索返回 "Collection expecting embedding with dimension of 1024, got 384"
-
-**原因**: 向量数据库使用旧模型
+**原因**: Cloudflare Tunnel URL 已过期或改变
 
 **解决**:
-```bash
-rm -rf ~/Documents/apple-notes-mcp/chroma_db/
-cd ~/Documents/apple-notes-mcp/scripts
-python3 indexer.py full
-```
+1. 重启启动脚本，获取新的 Tunnel URL
+2. 更新 `wrangler.toml` 中的 `LOCAL_API_URL`
+3. 重新部署 Cloudflare Workers
 
-### 问题 3: 搜索结果是乱码
-
-**原因**: 使用了旧的导出脚本
-
-**解决**:
-```bash
-cd ~/Documents/apple-notes-mcp/scripts
-python3 export_notes_fixed.py
-python3 indexer.py full
-```
-
-### 问题 4: Poke AI 报错 "Authentication failed"
-
-**可能原因**:
-- Poke AI 可能要求 API Key 认证
-- 需要查看 Poke AI 的官方文档确认是否支持本地 MCP 服务器
-
-**临时解决**:
-- 如果 Poke AI 不支持无认证的本地服务器，可能需要在前面加一个代理层
-
-### 问题 5: 服务器启动慢
+#### 问题 3: 服务器启动慢
 
 **原因**: BGE-M3 模型加载需要时间（首次启动约 10-15 秒）
 
-**优化**:
-- 使用后台运行方式，让服务器保持运行
-- 避免频繁重启
+**建议**:
+- 让服务保持运行（不要频繁重启）
+- 使用 tmux 或 nohup 后台运行
 
 ---
 
-## 与 Claude Desktop 共存
-
-你可以同时使用两个服务器：
-
-1. **Claude Desktop**: 使用 `server.py`（stdio 传输）
-   - 配置在 `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - 无需手动启动，Claude Desktop 会自动启动
-
-2. **Poke AI**: 使用 `server_http.py`（HTTP/SSE 传输）
-   - 需要手动启动并保持运行
-   - 使用不同的传输协议，互不干扰
-
-两者共享同一个向量数据库（`~/Documents/apple-notes-mcp/chroma_db/`），搜索结果一致。
-
----
-
-## 性能说明
+### 性能说明
 
 **首次查询**:
 - 模型加载时间: ~10 秒
@@ -300,151 +238,233 @@ python3 indexer.py full
 
 **索引刷新**:
 - 920 条笔记: ~3 分钟
-- 增量更新: <1 分钟（如果只有少量新笔记）
 
 ---
 
-## 安全说明
+### 安全说明
 
 **当前配置**:
-- 服务器绑定到 `127.0.0.1`（仅本地访问）
-- 无 API 密钥验证
-- 无 HTTPS 加密
+- ✅ Python API 只监听 `localhost:8001`（仅本地访问）
+- ✅ Cloudflare Tunnel 使用 HTTPS 加密
+- ✅ Cloudflare Workers 使用官方 SDK
+- ⚠️ 无 API 密钥验证（信任所有请求）
 
 **适用场景**:
-- ✅ 本地开发和测试
-- ✅ 本机的 Poke AI 使用
+- ✅ 个人使用
+- ✅ 家庭局域网
 
 **不适用场景**:
-- ❌ 暴露到公网
-- ❌ 多用户访问
-
-如果需要远程访问，建议：
-1. 添加 API 密钥认证
-2. 使用反向代理（如 Nginx）配置 HTTPS
-3. 设置防火墙规则
+- ❌ 多用户公开访问
 
 ---
 
-## 技术架构
+### 更新索引
 
-```
-Poke AI (iMessage)
-    ↓
-HTTP/SSE (http://127.0.0.1:8000/sse)
-    ↓
-server_http.py (MCP 服务器)
-    ↓
-BGE-M3 模型 (语义编码)
-    ↓
-ChromaDB (向量搜索)
-    ↓
-~/notes.db (SQLite 笔记数据库)
-    ↓
-Apple Notes (原始数据源)
+当你在 Apple Notes 中添加新笔记后，需要重新索引：
+
+```bash
+cd ~/Documents/apple-notes-mcp/scripts
+
+# 导出最新笔记
+python3 export_notes_fixed.py
+
+# 增量更新索引（只处理新笔记）
+python3 indexer.py incremental
+
+# 或者完全重建索引（耗时更长但更彻底）
+python3 indexer.py full
 ```
 
----
-
-## 下一步优化
-
-如果你在使用过程中想要更多功能，可以考虑：
-
-1. **添加身份验证**: 为 HTTP 服务器添加 API Key
-2. **部署到云端**: 使用 Railway、Fly.io 或自己的服务器
-3. **优化响应速度**: 启用 MPS GPU 加速
-4. **增强搜索质量**: 添加 DeepSeek API 重排序
-5. **监控和日志**: 添加性能监控和详细日志
+索引更新后无需重启服务，下次搜索自动使用新数据。
 
 ---
 
-## Poke AI 集成调试（2025-11-07）
+## English
 
-### 当前状态
+### System Overview
 
-**问题**: Poke AI 报错 "Cannot read properties of undefined (reading 'status')"
+**Apple Notes MCP System**:
+- 920 notes indexed
+- BGE-M3 model (1024-dimensional vectors)
+- 87% search accuracy
+- Supports bilingual (Chinese/English) semantic search
 
-**已验证**:
-- ✅ 服务器运行正常（HTTP 200 OK）
-- ✅ iPhone 可以通过 WiFi 访问服务器（`http://10.0.0.189:8000/sse`）
-- ✅ SSE 流格式正确（每 15 秒发送心跳包）
-- ✅ Poke AI 支持 MCP（已用 Metaso 的 MCP 测试成功）
+**Technical Architecture**:
+```
+Poke AI (iMessage/iPhone)
+    ↓ HTTPS
+Cloudflare Workers (Global Edge Network)
+    ↓ HTTPS
+Cloudflare Tunnel (Public Tunnel)
+    ↓ HTTP
+Python API Server (Local Mac)
+    ↓
+BGE-M3 Model + ChromaDB (Semantic Search)
+    ↓
+Apple Notes Database
+```
 
-**问题分析**:
-1. **技术栈差异**:
-   - poke-mcp 使用: TypeScript + `@modelcontextprotocol/sdk` (官方 SDK)
-   - 我们使用: Python + `fastmcp` (第三方实现)
+### Quick Start
 
-2. **可能的兼容性问题**:
-   - FastMCP 的 SSE 实现可能与官方 MCP SDK 不完全兼容
-   - Poke AI 可能只支持官方 SDK 的消息格式
+#### Step 1: Start Services
 
-### 参考项目：poke-mcp
+Use the provided startup script to launch all services with one command:
 
-**GitHub**: https://github.com/kaishin/poke-mcp
+```bash
+cd ~/Documents/apple-notes-mcp/scripts
+./start_poke_services.sh
+```
 
-**关键信息**:
-- 使用 Cloudflare Workers 部署
-- 使用官方 `@modelcontextprotocol/sdk` (v1.17.1)
-- 使用 `agents` 包 (v0.0.109) 提供的 `McpAgent` 基类
-- 部署 URL 格式: `https://poke-mcp.username.workers.dev/sse`
+**The script automatically**:
+1. Checks dependencies (Python Flask, Cloudflare Tunnel)
+2. Starts Python API server (port 8001)
+3. Starts Cloudflare Tunnel (generates public URL)
+4. Displays all service statuses and URLs
 
-**技术优势**:
-- ✅ 免费额度大（100,000 请求/天）
-- ✅ 全球边缘网络（低延迟）
-- ✅ 冷启动快（<10ms）
-- ✅ 与 Poke AI 兼容性好
+#### Step 2: Update Cloudflare Workers (if Tunnel URL changes)
 
-### 解决方案建议
+If the Cloudflare Tunnel URL changes (it changes every restart):
 
-#### 短期方案（调试当前 Python 实现）:
-
-1. **对比 SSE 消息格式**:
-   ```bash
-   # 测试 poke-mcp 的响应
-   curl -v https://poke-mcp.kaishin.workers.dev/sse
-
-   # 测试我们的响应
-   curl -v http://10.0.0.189:8000/sse
-
-   # 对比差异
+1. Edit [cloudflare-worker/wrangler.toml](../cloudflare-worker/wrangler.toml):
+   ```toml
+   [vars]
+   ENVIRONMENT = "production"
+   LOCAL_API_URL = "https://new-tunnel-url.trycloudflare.com"
    ```
 
-2. **检查 FastMCP 版本和配置**:
-   - 升级到最新 FastMCP 版本
-   - 查看 FastMCP 文档关于 SSE 传输的说明
+2. Redeploy:
+   ```bash
+   cd ~/Documents/apple-notes-mcp/cloudflare-worker
+   npx wrangler deploy
+   ```
 
-3. **添加调试日志**:
-   - 在 server_http.py 中增加详细的请求/响应日志
-   - 查看 Poke AI 发送了什么请求
+#### Step 3: Configure in Poke AI
 
-#### 长期方案（使用 Cloudflare Workers）:
+1. Open Poke AI app (iPhone/iMessage)
+2. Go to Settings → Connections → Integrations → New Integration
+3. Fill in:
+   - **Name**: `Apple Notes Search`
+   - **Server URL**: `https://apple-notes-mcp.yinanli1917.workers.dev/sse`
+   - **API Key**: *(leave empty)*
+4. Click "Create Integration"
 
-**优点**:
-- 与 Poke AI 兼容性更好（使用官方 SDK）
-- 免费额度大
-- 支持远程访问（不需要 WiFi）
+#### Step 4: Start Using
 
-**挑战**:
-- BGE-M3 模型太大，无法在 Workers 中运行
-  - **解决**: 使用 Cloudflare Workers AI 的嵌入模型（如 `@cf/baai/bge-base-en-v1.5`）
-- ChromaDB 需要持久化存储
-  - **解决**: 使用 R2 对象存储 + 简化的向量搜索算法
+**Example Conversation**:
 
-**实施步骤**: 参见 [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md)
+```
+You: Search for funny content
+Poke: 🔍 Search: "funny content"
+
+Found 5 relevant results:
+
+1. **Jokes** (95% match)
+   📅 2024-03-15
+   Here are some funny jokes...
+
+2. **Humor** (87% match)
+   📅 2024-02-20
+   More funny stuff...
+
+💡 Tip: You can view the full content in the Notes app on your Mac
+```
 
 ---
 
-## 联系与反馈
+### Available Tools
 
-如果遇到问题或有改进建议：
-1. 查看 [README.md](../README.md) 了解项目概况
-2. 查看 [PROJECT_LOG.md](PROJECT_LOG.md) 了解技术细节
-3. 查看 [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md) 了解 Cloudflare Workers 部署
-4. 在 GitHub 仓库提交 Issue: https://github.com/yinanli1917-cloud/apple-notes-mcp
+#### 1. search_notes
+**Function**: Search notes using AI semantic search
+
+**Parameters**:
+- `query` (required): Search query (supports natural language)
+- `limit` (optional): Maximum results (default 5, max 20)
+
+#### 2. get_stats
+**Function**: View system statistics
+
+**Returns**:
+- Indexed notes count
+- Embedding model info
+- Vector dimensions
+- System status
 
 ---
 
-**最后更新**: 2025-11-07
-**版本**: 1.1
-**状态**: ⚠️ 调试中 - Poke AI 集成遇到兼容性问题
+### Technical Details
+
+#### Why Cloudflare Tunnel?
+
+**Problem**: Cloudflare Workers runs in the cloud and cannot access local IP addresses (e.g., `10.0.0.189:8001`)
+
+**Solution**:
+1. **Cloudflare Tunnel** exposes local API server to the internet (HTTPS)
+2. **Cloudflare Workers** accesses local API via public URL
+3. **Python API** calls local BGE-M3 model and ChromaDB for search
+
+#### Architecture Benefits
+
+✅ **Best Performance**: Uses local BGE-M3 model with high accuracy (87%)
+✅ **Global Access**: Cloudflare Workers edge network, low latency
+✅ **Free to Use**: Cloudflare free tier sufficient for personal use (100,000 requests/day)
+✅ **Privacy**: Notes data stays local, only search results transmitted
+
+---
+
+### Troubleshooting
+
+#### Issue 1: Poke AI cannot connect to MCP server
+
+**Checklist**:
+1. Confirm startup script is running (don't close the terminal)
+2. Confirm Cloudflare Workers is deployed:
+   ```bash
+   curl https://apple-notes-mcp.yinanli1917.workers.dev/health
+   ```
+
+#### Issue 2: Search returns "❌ Search failed: API returned 403"
+
+**Cause**: Cloudflare Tunnel URL expired or changed
+
+**Solution**:
+1. Restart startup script to get new Tunnel URL
+2. Update `LOCAL_API_URL` in `wrangler.toml`
+3. Redeploy Cloudflare Workers
+
+---
+
+### Performance
+
+**First Query**:
+- Model loading: ~10 seconds
+- Query time: ~200-500ms
+
+**Subsequent Queries**:
+- Query time: ~100-200ms
+
+---
+
+### Updating the Index
+
+When you add new notes in Apple Notes, reindex:
+
+```bash
+cd ~/Documents/apple-notes-mcp/scripts
+
+# Export latest notes
+python3 export_notes_fixed.py
+
+# Incremental update (faster, only new notes)
+python3 indexer.py incremental
+
+# Full rebuild (slower but thorough)
+python3 indexer.py full
+```
+
+No need to restart services after updating the index.
+
+---
+
+**最后更新 / Last Updated**: 2025-11-07
+**版本 / Version**: 2.0
+**状态 / Status**: ✅ 已成功集成 / Successfully Integrated
