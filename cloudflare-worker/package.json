@@ -1,0 +1,31 @@
+{
+  "name": "apple-notes-mcp-worker",
+  "version": "1.0.0",
+  "description": "Apple Notes MCP Server for Cloudflare Workers (Poke AI compatible)",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "mcp",
+    "apple-notes",
+    "semantic-search",
+    "cloudflare-workers"
+  ],
+  "author": "Yinan Li",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.1",
+    "agents": "^0.2.21",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.105.0"
+  }
+}

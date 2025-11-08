@@ -1,0 +1,22 @@
+# Cloudflare Workers 配置
+# Apple Notes MCP Server
+
+name = "apple-notes-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-11-07"
+compatibility_flags = ["nodejs_compat"]
+
+# Durable Objects 绑定（McpAgent 需要）
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "AppleNotesMcpAgent"
+
+# Durable Objects 迁移配置
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AppleNotesMcpAgent"]
+
+# 环境变量
+[vars]
+ENVIRONMENT = "production"
+LOCAL_API_URL = "https://secret-rolls-stories-substances.trycloudflare.com"
