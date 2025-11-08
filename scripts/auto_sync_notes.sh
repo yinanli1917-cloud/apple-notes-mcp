@@ -33,9 +33,9 @@ else
     exit 1
 fi
 
-# 2. 增量更新索引
+# 2. 增量更新索引（无参数 = 增量索引）
 log "🔍 步骤 2/2: 增量更新索引..."
-if $PYTHON "$SCRIPT_DIR/indexer.py" incremental >> "$LOG_FILE" 2>&1; then
+if $PYTHON "$SCRIPT_DIR/indexer.py" >> "$LOG_FILE" 2>&1; then
     log "✅ 索引更新成功"
 else
     log "❌ 索引更新失败"
