@@ -21,6 +21,7 @@ Turn your Apple Notes into a searchable knowledge base powered by AI. Instead of
 - **Multi-language**: Supports 100+ languages
 - **Privacy First**: All data stays local (optional cloud deploy)
 - **Claude Desktop Integration**: Works seamlessly with Claude
+- **Poke AI Integration**: Search your notes via iMessage (NEW!)
 
 ### Quick Start
 
@@ -71,6 +72,24 @@ python3 indexer.py
 
 👉 [Learn more about configuring MCP servers](https://modelcontextprotocol.io/quickstart/user)
 
+**Use with Poke AI (iMessage):**
+
+Search your notes directly from iMessage using Poke AI!
+
+1. Install [Poke AI](https://poke.com) on your iPhone
+2. Start the services on your Mac:
+   ```bash
+   cd ~/Documents/apple-notes-mcp/scripts
+   ./start_poke_services.sh
+   ```
+3. Configure Poke AI with the MCP server URL:
+   ```
+   https://apple-notes-mcp.yinanli1917.workers.dev/sse
+   ```
+4. Search via iMessage: "Search my notes for funny jokes"
+
+👉 [Full Poke AI Setup Guide](docs/POKE_INTEGRATION.md)
+
 ### Cost
 
 **Local (Free):**
@@ -85,16 +104,23 @@ python3 indexer.py
 
 ### Tech Stack
 
+**Core Search:**
 - **BGE-M3**: Chinese-optimized embedding model (1024-dim)
 - **ChromaDB**: Vector database
-- **FastMCP**: MCP protocol framework
 - **Python 3.12**
+
+**Integrations:**
+- **FastMCP**: MCP protocol framework (Claude Desktop)
+- **Cloudflare Workers**: Serverless platform (Poke AI)
+- **Cloudflare Tunnel**: Secure local-to-cloud bridge
 
 ### Documentation
 
-- [Cloud Deployment Guide](docs/DEPLOY.md)
-- [Poke AI Integration](docs/POKE_INTEGRATION.md) (Work in Progress)
-- [Technical Details](docs/PROJECT_LOG.md)
+- [Poke AI Integration Guide](docs/POKE_INTEGRATION.md) - Search via iMessage
+- [Cloudflare Tunnel Setup](docs/CLOUDFLARE_TUNNEL.md) - Local-to-cloud bridge
+- [Cloud Deployment Guide](docs/DEPLOY.md) - Deploy to Fly.io/Railway
+- [Project Status](STATUS.md) - Current features and roadmap
+- [Technical Details](docs/PROJECT_LOG.md) - Development log
 
 ### Contributing
 
@@ -127,6 +153,7 @@ MIT License © 2025 [Yinan Li](https://github.com/yinanli1917-cloud)
 - **多语言支持**：支持 100+ 种语言
 - **隐私优先**：数据保存在本地（可选云端部署）
 - **Claude Desktop 集成**：与 Claude 无缝配合
+- **Poke AI 集成**：通过 iMessage 搜索笔记（新功能！）
 
 ### 快速开始
 
@@ -177,6 +204,24 @@ python3 indexer.py
 
 👉 [了解更多关于配置 MCP 服务器](https://modelcontextprotocol.io/quickstart/user)
 
+**在 Poke AI（iMessage）中使用：**
+
+直接通过 iMessage 搜索你的备忘录！
+
+1. 在 iPhone 上安装 [Poke AI](https://poke.com)
+2. 在 Mac 上启动服务：
+   ```bash
+   cd ~/Documents/apple-notes-mcp/scripts
+   ./start_poke_services.sh
+   ```
+3. 在 Poke AI 中配置 MCP 服务器 URL：
+   ```
+   https://apple-notes-mcp.yinanli1917.workers.dev/sse
+   ```
+4. 通过 iMessage 搜索："搜索我的笔记里关于幽默搞笑的内容"
+
+👉 [完整 Poke AI 配置指南](docs/POKE_INTEGRATION.md)
+
 ### 费用
 
 **本地使用（免费）：**
@@ -191,16 +236,23 @@ python3 indexer.py
 
 ### 技术栈
 
+**核心搜索：**
 - **BGE-M3**：中文优化的嵌入模型（1024 维向量）
 - **ChromaDB**：向量数据库
-- **FastMCP**：MCP 协议框架
 - **Python 3.12**
+
+**集成方式：**
+- **FastMCP**：MCP 协议框架（Claude Desktop）
+- **Cloudflare Workers**：无服务器平台（Poke AI）
+- **Cloudflare Tunnel**：安全的本地到云端桥接
 
 ### 文档
 
-- [云端部署指南](docs/DEPLOY.md)
-- [Poke AI 集成](docs/POKE_INTEGRATION.md)（开发中）
-- [技术文档](docs/PROJECT_LOG.md)
+- [Poke AI 集成指南](docs/POKE_INTEGRATION.md) - 通过 iMessage 搜索
+- [Cloudflare Tunnel 配置](docs/CLOUDFLARE_TUNNEL.md) - 本地到云端桥接
+- [云端部署指南](docs/DEPLOY.md) - 部署到 Fly.io/Railway
+- [项目状态](STATUS.md) - 当前功能和路线图
+- [技术文档](docs/PROJECT_LOG.md) - 开发日志
 
 ### 参与贡献
 
