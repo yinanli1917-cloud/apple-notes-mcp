@@ -5,6 +5,9 @@ chroma_db/
 *.db
 notes.db
 
+# 归档文件（旧版本、废弃代码）
+archive/
+
 # 同步时间戳
 .last_sync
 
